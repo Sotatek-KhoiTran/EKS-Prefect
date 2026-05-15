@@ -1,0 +1,29 @@
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+.aws/
+
+# Generated files
+.generated/
+__pycache__/
+*.pyc
+
+# Terraform local files
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!terraform/terraform.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local Kubernetes config copies
+kubeconfig
+kubeconfig.*
+*.kubeconfig
