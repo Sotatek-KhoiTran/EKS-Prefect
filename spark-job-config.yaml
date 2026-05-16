@@ -1,0 +1,57 @@
+defaults:
+  namespace: spark-jobs
+  image: docker.io/library/spark:3.5.1-python3
+  driver:
+    cores: 1
+    coreLimit: 1200m
+    memory: 1g
+    serviceAccount: spark-driver-sa
+  executor:
+    instances: 2
+    cores: 1
+    memory: 1g
+
+jobs:
+  - name: etl_job_1
+    application_name_prefix: etl-job-1
+    main_application_file: jobs/etl_job_1.py
+    input_prefix: raw
+    output_prefix: processed/etl_job_1
+    arguments:
+      - --input
+      - s3a://prefect-demo-data/raw/listings/
+      - --output
+      - s3a://prefect-demo-data/processed/etl_job_1/
+    driver:
+      cores: 1
+      coreLimit: 1200m
+      memory: 1g
+      serviceAccount: spark-driver-sa
+    executor:
+      instances: 2
+      cores: 1
+      memory: 1536m
+
+
+  - name: etl_job_2
+    application_name_prefix: etl-job-2
+    main_application_file: jobs/etl_job_2.py
+    input_prefix: raw-json
+    output_prefix: processed/etl_job_2
+    arguments:
+      - --input
+      - s3a://prefect-demo-data/raw/news/
+      - --output
+      - s3a://prefect-demo-data/processed/etl_job_2/
+
+
+  - name: etl_job_3
+    application_name_prefix: etl-job-3
+    main_application_file: jobs/etl_job_3.py
+    input_prefix: raw-parquet
+    output_prefix: processed/etl_job_3
+    arguments:
+      - --input
+      - s3a://prefect-demo-data/processed/
+      - --output
+      - s3a://prefect-demo-data/processed/etl_job_3/

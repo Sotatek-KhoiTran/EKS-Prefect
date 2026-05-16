@@ -11,8 +11,7 @@ Terraform manages:
 - IRSA roles and policies for `prefect-flow-run` and `spark-driver-sa`
 - Kubernetes namespaces, service accounts, roles, and role bindings
 - Helm releases for Prefect Server, Prefect Worker, and Spark Operator
-- Upload of `jobs/etl_job.py` to `s3://<data_bucket>/jobs/etl_job.py`
-- Upload of sample CSV data to `s3://<data_bucket>/raw/`
+- Upload of `jobs/*.py` to `s3://<data_bucket>/jobs/`
 
 Terraform does not build/push the Docker image or run `prefect deploy --all`. Keep those as explicit post-apply steps because they depend on your local Docker daemon and the Prefect API.
 

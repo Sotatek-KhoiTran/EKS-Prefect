@@ -31,7 +31,7 @@ flowchart TD
     Dev --> Deploy[prefect deploy --all]
     Deploy --> PrefectServer
 
-    S3 --> SparkCode[s3://data-bucket/jobs/etl_job.py]
+    S3 --> SparkCode[s3://data-bucket/jobs/etl_job_1.py]
     S3 --> RawData[s3://data-bucket/raw/sample_sales.csv]
 
     PrefectWorker --> FlowRun[Prefect flow run]
@@ -54,13 +54,31 @@ flowchart TD
 
 1. Configure AWS credentials with `aws configure`.
 2. Run Terraform from `terraform/` to create EKS, Fargate profiles, S3, ECR, IRSA, Kubernetes RBAC, Prefect, and Spark Operator.
-3. Build and push the Prefect runtime image to ECR.
-4. Run `prefect deploy --all` through `scripts/prefect-selfhosted-deploy.sh`.
-5. Start a Prefect deployment manually, or run the demo event emitter deployment.
-6. Prefect Worker creates a Kubernetes job for the flow run.
-7. The flow creates a SparkApplication custom resource in the `spark-jobs` namespace.
-8. Spark Operator creates Spark driver and executor pods on EKS Fargate.
-9. Spark reads raw CSV data from S3 and writes processed Parquet output back to S3.
+3. Terraform or `scripts/upload-spark-job-to-s3.sh` uploads `jobs/*.py` to S3.
+4. Build and push the Prefect runtime image to ECR.
+5. Run `prefect deploy --all` through `scripts/prefect-selfhosted-deploy.sh`.
+6. Start a Prefect deployment manually, or run the demo event emitter deployment.
+7. Prefect Worker creates a Kubernetes job for the flow run.
+8. The flow reads `spark-job-config.yaml`, applies the selected job config to `spark-job.yaml`, and creates a complete SparkApplication manifest.
+9. The flow submits the SparkApplication custom resource in the `spark-jobs` namespace.
+10. Spark Operator creates Spark driver and executor pods on EKS Fargate.
+11. Spark reads raw data from S3 and writes processed Parquet output back to S3.
+
+## Spark Job Template
+
+`spark-job.yaml` is a reusable SparkApplication template. Job-specific values live in `spark-job-config.yaml`.
+
+To render a complete manifest locally:
+
+```bash
+python scripts/render-spark-application.py \
+  --job-name etl_job_1 \
+  --s3-bucket prefect-demo-data \
+  --spark-app-name demo-etl-job \
+  --output .generated/spark-application.yaml
+```
+
+The Prefect flow performs the same rendering step before submitting the SparkApplication to Kubernetes.
 
 ## Event Trigger Demo
 

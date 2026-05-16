@@ -7,5 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY flows ./flows
 COPY spark-job.yaml ./spark-job.yaml
+COPY spark-job-config.yaml ./spark-job-config.yaml
 
 ENV SPARK_APPLICATION_FILE=/opt/prefect/spark-job.yaml
+ENV SPARK_JOB_CONFIG_FILE=/opt/prefect/spark-job-config.yaml

@@ -2,7 +2,7 @@ prefect-version: 3.0.0
 name: prefect-spark-eks
 
 deployments:
-  - name: eks-spark-s3-demo
+  - name: eks-spark-s3-demo-flow-1
     version: "1"
     entrypoint: flows/etl_pipeline.py:etl_pipeline
     build: []
@@ -11,10 +11,89 @@ deployments:
       - prefect.deployments.steps.set_working_directory:
           directory: /opt/prefect
     parameters:
+      job_name: etl_job_1
       s3_bucket: "{{ $DATA_BUCKET }}"
-      spark_job_key: jobs/etl_job.py
-      input_prefix: raw
-      output_prefix: processed
+      spark_job_key: ""
+      input_prefix: ""
+      output_prefix: ""
+      spark_namespace: spark-jobs
+      spark_image: "{{ $SPARK_IMAGE }}"
+      cleanup: true
+      cleanup_on_failure: false
+      poll_seconds: 15
+      timeout_seconds: 1800
+    work_pool:
+      name: "{{ $PREFECT_WORK_POOL_NAME }}"
+      work_queue_name: "{{ $PREFECT_WORK_QUEUE_NAME }}"
+      job_variables:
+        namespace: prefect
+        image: "{{ $PREFECT_IMAGE_NAME }}:{{ $PREFECT_IMAGE_TAG }}"
+        image_pull_policy: Always
+        service_account_name: prefect-flow-run
+        env:
+          DATA_BUCKET: "{{ $DATA_BUCKET }}"
+          SPARK_JOB_NAME: etl_job_1
+          SPARK_JOB_KEY: ""
+          SPARK_INPUT_PREFIX: ""
+          SPARK_OUTPUT_PREFIX: ""
+          SPARK_NAMESPACE: spark-jobs
+          SPARK_IMAGE: "{{ $SPARK_IMAGE }}"
+          SPARK_APPLICATION_FILE: /opt/prefect/spark-job.yaml
+          SPARK_JOB_CONFIG_FILE: /opt/prefect/spark-job-config.yaml
+
+  - name: eks-spark-s3-demo-flow-2
+    version: "1"
+    entrypoint: flows/etl_pipeline.py:etl_pipeline
+    build: []
+    push: []
+    pull:
+      - prefect.deployments.steps.set_working_directory:
+          directory: /opt/prefect
+    parameters:
+      job_name: etl_job_2
+      s3_bucket: "{{ $DATA_BUCKET }}"
+      spark_job_key: ""
+      input_prefix: ""
+      output_prefix: ""
+      spark_namespace: spark-jobs
+      spark_image: "{{ $SPARK_IMAGE }}"
+      cleanup: true
+      cleanup_on_failure: false
+      poll_seconds: 15
+      timeout_seconds: 1800
+    work_pool:
+      name: "{{ $PREFECT_WORK_POOL_NAME }}"
+      work_queue_name: "{{ $PREFECT_WORK_QUEUE_NAME }}"
+      job_variables:
+        namespace: prefect
+        image: "{{ $PREFECT_IMAGE_NAME }}:{{ $PREFECT_IMAGE_TAG }}"
+        image_pull_policy: Always
+        service_account_name: prefect-flow-run
+        env:
+          DATA_BUCKET: "{{ $DATA_BUCKET }}"
+          SPARK_JOB_NAME: etl_job_2
+          SPARK_JOB_KEY: ""
+          SPARK_INPUT_PREFIX: ""
+          SPARK_OUTPUT_PREFIX: ""
+          SPARK_NAMESPACE: spark-jobs
+          SPARK_IMAGE: "{{ $SPARK_IMAGE }}"
+          SPARK_APPLICATION_FILE: /opt/prefect/spark-job.yaml
+          SPARK_JOB_CONFIG_FILE: /opt/prefect/spark-job-config.yaml
+
+  - name: eks-spark-s3-demo-flow-3
+    version: "1"
+    entrypoint: flows/etl_pipeline.py:etl_pipeline
+    build: []
+    push: []
+    pull:
+      - prefect.deployments.steps.set_working_directory:
+          directory: /opt/prefect
+    parameters:
+      job_name: etl_job_3
+      s3_bucket: "{{ $DATA_BUCKET }}"
+      spark_job_key: ""
+      input_prefix: ""
+      output_prefix: ""
       spark_namespace: spark-jobs
       spark_image: "{{ $SPARK_IMAGE }}"
       cleanup: true
@@ -22,23 +101,27 @@ deployments:
       poll_seconds: 15
       timeout_seconds: 1800
     triggers:
-      - type: event
+      - type: compound
         enabled: true
-        match:
-          prefect.resource.id: prefect-spark-eks.raw-data
-        expect:
-          - prefect-spark-eks.raw-data.ready
-        parameters:
-          s3_bucket: "{{ event.payload.s3_bucket }}"
-          spark_job_key: "{{ event.payload.spark_job_key }}"
-          input_prefix: "{{ event.payload.input_prefix }}"
-          output_prefix: "{{ event.payload.output_prefix }}"
-          spark_namespace: "{{ event.payload.spark_namespace }}"
-          spark_image: "{{ event.payload.spark_image }}"
-          cleanup: true
-          cleanup_on_failure: false
-          poll_seconds: 15
-          timeout_seconds: 1800
+        require: all
+        within: 3600
+        triggers:
+          - type: event
+            posture: Reactive
+            expect: ["prefect.flow-run.Completed"]
+            match:
+              prefect.resource.id: prefect.flow-run.*
+            match_related:
+              prefect.resource.name: eks-spark-s3-demo-flow-1
+              prefect.resource.role: deployment
+          - type: event
+            posture: Reactive
+            expect: ["prefect.flow-run.Completed"]
+            match:
+              prefect.resource.id: prefect.flow-run.*
+            match_related:
+              prefect.resource.name: eks-spark-s3-demo-flow-2
+              prefect.resource.role: deployment
     work_pool:
       name: "{{ $PREFECT_WORK_POOL_NAME }}"
       work_queue_name: "{{ $PREFECT_WORK_QUEUE_NAME }}"
@@ -49,41 +132,46 @@ deployments:
         service_account_name: prefect-flow-run
         env:
           DATA_BUCKET: "{{ $DATA_BUCKET }}"
-          SPARK_JOB_KEY: jobs/etl_job.py
-          SPARK_INPUT_PREFIX: raw
-          SPARK_OUTPUT_PREFIX: processed
+          SPARK_JOB_NAME: etl_job_3
+          SPARK_JOB_KEY: ""
+          SPARK_INPUT_PREFIX: ""
+          SPARK_OUTPUT_PREFIX: ""
           SPARK_NAMESPACE: spark-jobs
           SPARK_IMAGE: "{{ $SPARK_IMAGE }}"
           SPARK_APPLICATION_FILE: /opt/prefect/spark-job.yaml
+          SPARK_JOB_CONFIG_FILE: /opt/prefect/spark-job-config.yaml
 
-  - name: emit-spark-etl-event
-    version: "1"
-    entrypoint: flows/etl_pipeline.py:emit_spark_etl_requested_event
-    build: []
-    push: []
-    pull:
-      - prefect.deployments.steps.set_working_directory:
-          directory: /opt/prefect
-    parameters:
-      s3_bucket: "{{ $DATA_BUCKET }}"
-      spark_job_key: jobs/etl_job.py
-      input_prefix: raw
-      output_prefix: processed
-      spark_namespace: spark-jobs
-      spark_image: "{{ $SPARK_IMAGE }}"
-    work_pool:
-      name: "{{ $PREFECT_WORK_POOL_NAME }}"
-      work_queue_name: "{{ $PREFECT_WORK_QUEUE_NAME }}"
-      job_variables:
-        namespace: prefect
-        image: "{{ $PREFECT_IMAGE_NAME }}:{{ $PREFECT_IMAGE_TAG }}"
-        image_pull_policy: Always
-        service_account_name: prefect-flow-run
-        env:
-          DATA_BUCKET: "{{ $DATA_BUCKET }}"
-          SPARK_JOB_KEY: jobs/etl_job.py
-          SPARK_INPUT_PREFIX: raw
-          SPARK_OUTPUT_PREFIX: processed
-          SPARK_NAMESPACE: spark-jobs
-          SPARK_IMAGE: "{{ $SPARK_IMAGE }}"
-          SPARK_APPLICATION_FILE: /opt/prefect/spark-job.yaml
+  # - name: emit-spark-etl-event
+  #   version: "1"
+  #   entrypoint: flows/etl_pipeline.py:emit_spark_etl_requested_event
+  #   build: []
+  #   push: []
+  #   pull:
+  #     - prefect.deployments.steps.set_working_directory:
+  #         directory: /opt/prefect
+  #   parameters:
+  #     job_name: etl_job_1
+  #     s3_bucket: "{{ $DATA_BUCKET }}"
+  #     spark_job_key: ""
+  #     input_prefix: ""
+  #     output_prefix: ""
+  #     spark_namespace: spark-jobs
+  #     spark_image: "{{ $SPARK_IMAGE }}"
+  #   work_pool:
+  #     name: "{{ $PREFECT_WORK_POOL_NAME }}"
+  #     work_queue_name: "{{ $PREFECT_WORK_QUEUE_NAME }}"
+  #     job_variables:
+  #       namespace: prefect
+  #       image: "{{ $PREFECT_IMAGE_NAME }}:{{ $PREFECT_IMAGE_TAG }}"
+  #       image_pull_policy: Always
+  #       service_account_name: prefect-flow-run
+  #       env:
+  #         DATA_BUCKET: "{{ $DATA_BUCKET }}"
+  #         SPARK_JOB_NAME: etl_job_1
+  #         SPARK_JOB_KEY: ""
+  #         SPARK_INPUT_PREFIX: ""
+  #         SPARK_OUTPUT_PREFIX: ""
+  #         SPARK_NAMESPACE: spark-jobs
+  #         SPARK_IMAGE: "{{ $SPARK_IMAGE }}"
+  #         SPARK_APPLICATION_FILE: /opt/prefect/spark-job.yaml
+  #         SPARK_JOB_CONFIG_FILE: /opt/prefect/spark-job-config.yaml

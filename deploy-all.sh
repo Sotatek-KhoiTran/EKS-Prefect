@@ -20,7 +20,7 @@ export IMAGE_TAG="${IMAGE_TAG:-latest}"
 export PREFECT_IMAGE_NAME="${PREFECT_IMAGE_NAME:-${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPOSITORY_NAME}}"
 export PREFECT_IMAGE_TAG="${PREFECT_IMAGE_TAG:-${IMAGE_TAG}}"
 export SPARK_IMAGE="${SPARK_IMAGE:-docker.io/library/spark:3.5.1-python3}"
-export SPARK_JOB_KEY="${SPARK_JOB_KEY:-jobs/etl_job.py}"
+export SPARK_JOB_KEY="${SPARK_JOB_KEY:-jobs/etl_job_1.py}"
 export SKIP_IMAGE_BUILD="${SKIP_IMAGE_BUILD:-false}"
 
 export PREFECT_WORK_POOL_NAME="${PREFECT_WORK_POOL_NAME:-kubernetes-pool}"

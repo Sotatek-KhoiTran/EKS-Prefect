@@ -48,11 +48,13 @@ resource "aws_ecr_repository" "prefect_runtime" {
   })
 }
 
-resource "aws_s3_object" "spark_job" {
+resource "aws_s3_object" "spark_jobs" {
+  for_each = fileset("${path.module}/../jobs", "*.py")
+
   bucket       = aws_s3_bucket.data.id
-  key          = "jobs/etl_job.py"
-  source       = "${path.module}/../jobs/etl_job.py"
-  etag         = filemd5("${path.module}/../jobs/etl_job.py")
+  key          = "jobs/${each.value}"
+  source       = "${path.module}/../jobs/${each.value}"
+  etag         = filemd5("${path.module}/../jobs/${each.value}")
   content_type = "text/x-python"
 }
 
