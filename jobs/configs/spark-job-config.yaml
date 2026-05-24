@@ -1,6 +1,5 @@
 defaults:
   namespace: spark-jobs
-  image: docker.io/library/spark:3.5.1-python3
   driver:
     cores: 1
     coreLimit: 1200m
@@ -14,14 +13,14 @@ defaults:
 jobs:
   - name: etl_job_1
     application_name_prefix: etl-job-1
-    main_application_file: jobs/etl_job_1.py
-    input_prefix: raw
-    output_prefix: processed/etl_job_1
+    main_application_file: spark/jobs/etl_job_1.py
     arguments:
-      - --input
+      - --source-input-path
       - s3a://prefect-demo-data/raw/listings/
-      - --output
-      - s3a://prefect-demo-data/processed/etl_job_1/
+      - --target_data_base
+      - processed
+      - --target_table
+      - listings
     driver:
       cores: 1
       coreLimit: 1200m
@@ -32,26 +31,41 @@ jobs:
       cores: 1
       memory: 1536m
 
+  - name: etl_job_1_dq
+    application_name_prefix: etl-job-1-dq
+    main_application_file: spark/jobs/etl_job_1_dq.py
+    arguments:
+      - --source-data-base
+      - processed
+      - --source-table
+      - listings
+      - --dq-checks-rules
+      - s3a://prefect-demo-scripts/spark/configs/checks.yaml
+    driver:
+      cores: 1
+      coreLimit: 1200m
+      memory: 1g
+      serviceAccount: spark-driver-sa
+    executor:
+      instances: 2
+      cores: 1
+      memory: 1536m
 
   - name: etl_job_2
     application_name_prefix: etl-job-2
-    main_application_file: jobs/etl_job_2.py
-    input_prefix: raw-json
-    output_prefix: processed/etl_job_2
+    main_application_file: spark/jobs/etl_job_2.py
     arguments:
       - --input
       - s3a://prefect-demo-data/raw/news/
       - --output
       - s3a://prefect-demo-data/processed/etl_job_2/
 
-
   - name: etl_job_3
     application_name_prefix: etl-job-3
-    main_application_file: jobs/etl_job_3.py
-    input_prefix: raw-parquet
-    output_prefix: processed/etl_job_3
+    main_application_file: spark/jobs/etl_job_3.py
     arguments:
       - --input
       - s3a://prefect-demo-data/processed/
       - --output
       - s3a://prefect-demo-data/processed/etl_job_3/
+

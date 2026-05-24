@@ -13,7 +13,7 @@ fi
 CLUSTER_NAME="${CLUSTER_NAME:-prefect-spark-demo}"
 REGION="${REGION:-ap-southeast-1}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
-PREFECT_FLOW_BUCKET="${PREFECT_FLOW_BUCKET:-<YOUR_BUCKET_NAME>}"
+SCRIPT_BUCKET="${SCRIPT_BUCKET:-<YOUR_BUCKET_NAME>}"
 
 PREFECT_FLOW_POLICY_NAME="${PREFECT_FLOW_POLICY_NAME:-PrefectFlowRunS3ReadPolicy}"
 PREFECT_FLOW_POLICY_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:policy/${PREFECT_FLOW_POLICY_NAME}"
@@ -72,10 +72,17 @@ cat > "${POLICY_FILE}" <<EOF
       "Sid": "ListPrefectFlowPrefix",
       "Effect": "Allow",
       "Action": ["s3:ListBucket"],
-      "Resource": "arn:aws:s3:::${PREFECT_FLOW_BUCKET}",
+      "Resource": "arn:aws:s3:::${SCRIPT_BUCKET}",
       "Condition": {
         "StringLike": {
-          "s3:prefix": ["prefect/flows/*"]
+          "s3:prefix": [
+            "prefect",
+            "prefect/*",
+            "prefect/flows",
+            "prefect/flows/*",
+            "spark/configs",
+            "spark/configs/*"
+          ]
         }
       }
     },
@@ -83,15 +90,39 @@ cat > "${POLICY_FILE}" <<EOF
       "Sid": "ReadPrefectFlowObjects",
       "Effect": "Allow",
       "Action": ["s3:GetObject"],
-      "Resource": "arn:aws:s3:::${PREFECT_FLOW_BUCKET}/prefect/flows/*"
+      "Resource": [
+        "arn:aws:s3:::${SCRIPT_BUCKET}/prefect/flows/*", 
+        "arn:aws:s3:::${SCRIPT_BUCKET}/spark/configs/*"
+      ]
     }
   ]
 }
 EOF
 
 if aws iam get-policy --policy-arn "${PREFECT_FLOW_POLICY_ARN}" >/dev/null 2>&1; then
-  echo "IAM policy already exists: ${PREFECT_FLOW_POLICY_ARN}"
+  echo "Updating existing IAM policy..."
+
+  DEFAULT_VERSION=$(aws iam get-policy \
+    --policy-arn "${PREFECT_FLOW_POLICY_ARN}" \
+    --query 'Policy.DefaultVersionId' \
+    --output text)
+
+  aws iam create-policy-version \
+    --policy-arn "${PREFECT_FLOW_POLICY_ARN}" \
+    --policy-document "$(cat "${POLICY_FILE}")" \
+    --set-as-default
+
+  echo "Deleting old policy version: ${DEFAULT_VERSION}"
+
+  if [ "${DEFAULT_VERSION}" != "v1" ]; then
+    aws iam delete-policy-version \
+      --policy-arn "${PREFECT_FLOW_POLICY_ARN}" \
+      --version-id "${DEFAULT_VERSION}"
+  fi
+
 else
+  echo "Creating IAM policy..."
+
   aws iam create-policy \
     --policy-name "${PREFECT_FLOW_POLICY_NAME}" \
     --policy-document "$(cat "${POLICY_FILE}")"

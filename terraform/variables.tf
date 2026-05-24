@@ -29,25 +29,37 @@ variable "enable_nat_gateway" {
 }
 
 variable "data_bucket" {
-  description = "S3 bucket used by Spark jobs for input/output data."
+  description = "S3 bucket for data storage."
   type        = string
   default     = "prefect-demo-data"
 }
 
-variable "prefect_flow_bucket" {
-  description = "S3 bucket used by Prefect flow storage."
+variable "script_bucket" {
+  description = "S3 bucket for scripts storage."
   type        = string
-  default     = "prefect-demo-flow"
+  default     = "prefect-demo-scripts"
 }
 
 variable "repository_name" {
+  description = "Deprecated. ECR repository for the Prefect runtime image when prefect_repository_name is not set."
+  type        = string
+  default     = "prefect-runtime"
+}
+
+variable "prefect_repository_name" {
   description = "ECR repository for the Prefect runtime image."
   type        = string
-  default     = "prefect-spark-runtime"
+  default     = null
+}
+
+variable "spark_repository_name" {
+  description = "ECR repository for the Spark runtime image."
+  type        = string
+  default     = "spark-runtime"
 }
 
 variable "image_tag" {
-  description = "Default image tag used by the Prefect worker deployment."
+  description = "Default image tag used by the Prefect and Spark runtime images."
   type        = string
   default     = "latest"
 }
@@ -55,7 +67,13 @@ variable "image_tag" {
 variable "spark_image" {
   description = "Spark container image used by flow parameters."
   type        = string
-  default     = "docker.io/library/spark:3.5.1-python3"
+  default     = null
+}
+
+variable "glue_database_names" {
+  description = "Glue databases used by Spark Iceberg jobs."
+  type        = set(string)
+  default     = ["processed"]
 }
 
 variable "prefect_work_pool_name" {

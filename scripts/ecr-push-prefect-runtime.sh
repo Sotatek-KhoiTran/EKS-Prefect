@@ -5,12 +5,18 @@ AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account 
 REGION="${REGION:-ap-southeast-1}"
 REPOSITORY_NAME="${REPOSITORY_NAME:-prefect-spark-runtime}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
-IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPOSITORY_NAME}:${IMAGE_TAG}"
 SKIP_IMAGE_BUILD="${SKIP_IMAGE_BUILD:-false}"
+
+PREFECT_REPO="${PREFECT_REPO:-prefect-runtime}"
+SPARK_REPO="${SPARK_REPO:-spark-runtime}"
+
+PREFECT_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${PREFECT_REPO}:${IMAGE_TAG}"
+SPARK_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${SPARK_REPO}:${IMAGE_TAG}"
 
 if [[ "${SKIP_IMAGE_BUILD}" == "true" ]]; then
   echo "Skipping Docker build/push because SKIP_IMAGE_BUILD=true"
-  echo "${IMAGE_URI}"
+  echo "Prefect Image URI: ${PREFECT_IMAGE_URI}"
+  echo "Spark Image URI  : ${SPARK_IMAGE_URI}"
   exit 0
 fi
 
@@ -21,18 +27,36 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-aws ecr describe-repositories \
-  --repository-names "${REPOSITORY_NAME}" \
-  --region "${REGION}" \
-  >/dev/null 2>&1 || aws ecr create-repository \
-    --repository-name "${REPOSITORY_NAME}" \
+echo "Ensuring ECR repositories exist..."
+for REPO in "${PREFECT_REPO}" "${SPARK_REPO}"; do
+  if ! aws ecr describe-repositories \
+    --repository-names "${REPO}" \
     --region "${REGION}" \
-    >/dev/null
+    >/dev/null 2>&1; then
+    echo "ECR repository '${REPO}' does not exist." >&2
+    echo "Create it with Terraform first: cd terraform && terraform apply" >&2
+    exit 1
+  fi
+  echo " - Repository '${REPO}' is ready."
+done
 
+echo "Logging into AWS ECR..."
 aws ecr get-login-password --region "${REGION}" \
   | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 
-docker build -t "${IMAGE_URI}" .
-docker push "${IMAGE_URI}"
+echo "----------------------------------------"
+echo "Building Prefect image..."
+docker build -f Dockerfile.prefect -t "${PREFECT_IMAGE_URI}" .
+echo "Pushing Prefect image..."
+docker push "${PREFECT_IMAGE_URI}"
 
-echo "${IMAGE_URI}"
+echo "----------------------------------------"
+echo "Building Spark image..."
+docker build -f Dockerfile.spark -t "${SPARK_IMAGE_URI}" .
+echo "Pushing Spark image..."
+docker push "${SPARK_IMAGE_URI}"
+
+echo "----------------------------------------"
+echo "Successfully built and pushed both images!"
+echo "Prefect Image URI: ${PREFECT_IMAGE_URI}"
+echo "Spark Image URI  : ${SPARK_IMAGE_URI}"

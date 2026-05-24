@@ -1,0 +1,114 @@
+checks for listings:
+  # 1. Completeness
+  - missing_count(id) = 0:
+      name: ID column cannot be null
+      attributes:
+        dimension: [Completeness]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  - missing_count(host_id) = 0:
+      name: Host ID is required
+      attributes:
+        dimension: [Completeness]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  - missing_count(price) = 0:
+      name: Price is required
+      attributes:
+        dimension: [Completeness]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  # 2. Uniqueness
+  - duplicate_count(id) = 0:
+      name: Each listing ID must be unique, no duplicates allowed
+      attributes:
+        dimension: [Uniqueness]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  # 3. Validity / Domain Check
+  - invalid_count(room_type) = 0:
+      valid values: ['Entire home/apt', 'Private room', 'Hotel room', 'Shared room']
+      name: Room type must belong to 4 standard categories
+      attributes:
+        dimension: [Validity]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  - invalid_count(neighbourhood_group) = 0:
+      valid values: ['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island']
+      name: Neighbourhood group must belong to 5 New York boroughs
+      attributes:
+        dimension: [Validity]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  - invalid_count(price) = 0:
+      valid min: 0
+      name: Price cannot be negative
+      attributes:
+        dimension: [Validity]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  # 4. Reasonableness
+  - invalid_count(minimum_nights) = 0:
+      valid min: 1
+      name: Minimum nights must be greater than or equal to 1
+      attributes:
+        dimension: [Validity]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  - invalid_count(availability_365) = 0:
+      valid min: 0
+      valid max: 365
+      name: Availability must be between 0 and 365 days
+      attributes:
+        dimension: [Validity]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  # 5. Geospatial Boundaries (NY area)
+  - invalid_count(latitude) = 0:
+      valid min: 40.0
+      valid max: 41.5
+      name: Latitude must not deviate from NY area
+      attributes:
+        dimension: [Validity]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  - invalid_count(longitude) = 0:
+      valid min: -75.0
+      valid max: -73.0
+      name: Longitude must not deviate from NY area
+      attributes:
+        dimension: [Validity]
+        pipeline_stage: Ingest
+        team: Data Engineering
+
+  - failed rows:
+      - name: Ensure latitude and longitude are not perfectly zero (catch geocoding system errors)
+        fail condition: latitude = 0 AND longitude = 0
+
+  # 6. Schema consistency
+  - schema:
+      when schema changes: any
+      when required column missing:
+        - id
+        - name
+        - price
+        - room_type
+      when wrong column type:
+        id: integer
+        price: float
+        availability_365: integer
+      name: Ensure the table always has essential columns and correct data types
+      attributes:
+        dimension: [Consistency]
+        pipeline_stage: Ingest
+        team: Data Engineering

@@ -78,6 +78,21 @@ Prefect UI port forwarding:
 kubectl port-forward -n prefect svc/prefect-server 4200:4200
 ```
 
+If a flow run fails with `User "system:anonymous" cannot create resource "sparkapplications"`,
+verify the flow-run service account and RBAC:
+
+```bash
+kubectl auth can-i create sparkapplications.sparkoperator.k8s.io \
+  -n spark-jobs \
+  --as system:serviceaccount:prefect:prefect-flow-run
+
+kubectl get job -n prefect -l prefect.io/flow-run-id -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.spec.template.spec.serviceAccountName}{"\n"}{end}'
+```
+
+The permission check must return `yes`, and Prefect flow-run jobs must use
+`prefect-flow-run` as their `serviceAccountName`. If either value is wrong, rerun
+`terraform apply` and then `bash scripts/prefect-selfhosted-deploy.sh`.
+
 Destroy the stack when finished:
 
 ```bash
@@ -88,6 +103,25 @@ terraform destroy
 If destroy fails because ECR still contains images, keep `force_delete = true` on `aws_ecr_repository.prefect_runtime` and rerun:
 
 ```bash
+terraform destroy
+```
+
+If old resources were created outside Terraform, or Spark created Glue tables after
+Terraform created the Glue database, clean the demo leftovers explicitly:
+
+```bash
+cd ..
+bash scripts/cleanup-aws-demo-resources.sh
+```
+
+The image push script expects Terraform to own the ECR repositories. If the
+repositories were created by an older script, import them before destroy:
+
+```bash
+cd terraform
+terraform import aws_ecr_repository.prefect_runtime prefect-runtime
+terraform import aws_ecr_repository.spark_runtime spark-runtime
+terraform import 'aws_glue_catalog_database.spark["processed"]' processed
 terraform destroy
 ```
 

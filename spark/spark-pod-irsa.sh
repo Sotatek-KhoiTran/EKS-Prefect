@@ -13,6 +13,7 @@ fi
 CLUSTER_NAME="${CLUSTER_NAME:-prefect-spark-demo}"
 REGION="${REGION:-ap-southeast-1}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text)}"
+SCRIPT_BUCKET="${SCRIPT_BUCKET:-<YOUR_BUCKET_NAME>}"
 DATA_BUCKET="${DATA_BUCKET:-<YOUR_BUCKET_NAME>}"
 
 SPARK_DATA_POLICY_NAME="${SPARK_DATA_POLICY_NAME:-SparkJobS3ReadWritePolicy}"
@@ -72,7 +73,24 @@ cat > "${POLICY_FILE}" <<EOF
       "Sid": "ListRawAndProcessedPrefixes",
       "Effect": "Allow",
       "Action": ["s3:ListBucket"],
-      "Resource": "arn:aws:s3:::${DATA_BUCKET}"
+      "Resource": [
+        "arn:aws:s3:::${DATA_BUCKET}",
+        "arn:aws:s3:::${SCRIPT_BUCKET}"
+      ],
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "raw",
+            "raw/*",
+            "processed",
+            "processed/*",
+            "spark/jobs",
+            "spark/jobs/*",
+            "spark/configs",
+            "spark/configs/*"
+          ]
+        }
+      }
     },
     {
       "Sid": "ReadWriteObjects",
@@ -84,15 +102,69 @@ cat > "${POLICY_FILE}" <<EOF
         "s3:AbortMultipartUpload",
         "s3:ListMultipartUploadParts"
       ],
-      "Resource": "arn:aws:s3:::prefect-demo-data/*"
+      "Resource": [
+        "arn:aws:s3:::${DATA_BUCKET}/raw/*",
+        "arn:aws:s3:::${DATA_BUCKET}/processed/*"
+      ]
+    },
+    {
+      "Sid": "ReadSparkJobsAndConfigs",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::${SCRIPT_BUCKET}/spark/jobs/*",
+        "arn:aws:s3:::${SCRIPT_BUCKET}/spark/configs/*"
+      ]
+    },
+    {
+      "Sid": "IcebergGlueCatalogPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "glue:GetDatabase",
+        "glue:GetDatabases",
+        "glue:CreateDatabase",
+        "glue:GetTable",
+        "glue:GetTables",
+        "glue:CreateTable",
+        "glue:UpdateTable",
+        "glue:DeleteTable"
+      ],
+      "Resource": [
+        "arn:aws:glue:${REGION}:${AWS_ACCOUNT_ID}:catalog",
+        "arn:aws:glue:${REGION}:${AWS_ACCOUNT_ID}:database/*",
+        "arn:aws:glue:${REGION}:${AWS_ACCOUNT_ID}:table/*/*"
+      ]
     }
   ]
 }
 EOF
 
 if aws iam get-policy --policy-arn "${SPARK_DATA_POLICY_ARN}" >/dev/null 2>&1; then
-  echo "IAM policy already exists: ${SPARK_DATA_POLICY_ARN}"
+  echo "Updating existing IAM policy..."
+
+  DEFAULT_VERSION=$(aws iam get-policy \
+    --policy-arn "${SPARK_DATA_POLICY_ARN}" \
+    --query 'Policy.DefaultVersionId' \
+    --output text)
+
+  aws iam create-policy-version \
+    --policy-arn "${SPARK_DATA_POLICY_ARN}" \
+    --policy-document "$(cat "${POLICY_FILE}")" \
+    --set-as-default
+
+  echo "Deleting old policy version: ${DEFAULT_VERSION}"
+
+  if [ "${DEFAULT_VERSION}" != "v1" ]; then
+    aws iam delete-policy-version \
+      --policy-arn "${SPARK_DATA_POLICY_ARN}" \
+      --version-id "${DEFAULT_VERSION}"
+  fi
+
 else
+  echo "Creating IAM policy..."
+
   aws iam create-policy \
     --policy-name "${SPARK_DATA_POLICY_NAME}" \
     --policy-document "$(cat "${POLICY_FILE}")"

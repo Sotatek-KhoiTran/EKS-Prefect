@@ -54,7 +54,20 @@ resource "helm_release" "spark_operator" {
           value    = "fargate"
           effect   = "NoSchedule"
         }]
+
+        resources = {
+          requests = {
+            cpu    = "500m"
+            memory = "1Gi"
+          }
+
+          limits = {
+            cpu    = "1"
+            memory = "2Gi"
+          }
+        }
       }
+
       spark = {
         serviceAccount = {
           create = false

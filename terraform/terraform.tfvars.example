@@ -2,10 +2,11 @@ cluster_name = "prefect-spark-demo"
 region       = "ap-southeast-1"
 eks_version  = "1.30"
 
-data_bucket         = "prefect-demo-data"
-prefect_flow_bucket = "prefect-demo-flow"
-repository_name     = "prefect-spark-runtime"
-image_tag           = "latest"
+data_bucket             = "prefect-demo-data"
+script_bucket           = "prefect-demo-scripts"
+prefect_repository_name = "prefect-runtime"
+spark_repository_name   = "spark-runtime"
+image_tag               = "latest"
 
 prefect_work_pool_name = "kubernetes-pool"
-spark_image            = "docker.io/library/spark:3.5.1-python3"
+glue_database_names    = ["processed"]

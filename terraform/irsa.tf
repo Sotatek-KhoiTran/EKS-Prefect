@@ -78,37 +78,84 @@ resource "aws_iam_role" "spark_driver" {
 
 data "aws_iam_policy_document" "prefect_flow_s3" {
   statement {
-    sid       = "ListPrefectFlowPrefix"
+    sid       = "ListScriptPrefixes"
     effect    = "Allow"
     actions   = ["s3:ListBucket"]
-    resources = [aws_s3_bucket.prefect_flow.arn]
+    resources = [aws_s3_bucket.script.arn]
 
     condition {
       test     = "StringLike"
       variable = "s3:prefix"
-      values   = ["prefect/flows/*"]
+      values = [
+        "prefect",
+        "prefect/*",
+        "prefect/flows",
+        "prefect/flows/*",
+        "spark/configs",
+        "spark/configs/*"
+      ]
     }
   }
 
   statement {
-    sid       = "ReadPrefectFlowObjects"
-    effect    = "Allow"
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.prefect_flow.arn}/prefect/flows/*"]
+    sid    = "ReadPrefectFlowAndConfigs"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject"
+    ]
+
+    resources = [
+      "${aws_s3_bucket.script.arn}/prefect/flows/*",
+      "${aws_s3_bucket.script.arn}/spark/configs/*"
+    ]
   }
 }
 
 data "aws_iam_policy_document" "spark_data_s3" {
   statement {
-    sid       = "ListDataBucket"
-    effect    = "Allow"
-    actions   = ["s3:ListBucket"]
-    resources = [aws_s3_bucket.data.arn]
+    sid     = "ListBuckets"
+    effect  = "Allow"
+    actions = ["s3:ListBucket"]
+
+    resources = [
+      aws_s3_bucket.data.arn,
+      aws_s3_bucket.script.arn
+    ]
+
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+
+      values = [
+        "raw",
+        "raw/*",
+        "processed",
+        "processed/*",
+        "spark/jobs",
+        "spark/jobs/*",
+        "spark/configs",
+        "spark/configs/*"
+      ]
+    }
+  }
+
+  statement {
+    sid    = "ReadSparkJobsAndConfigs"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject"
+    ]
+
+    resources = [
+      "${aws_s3_bucket.script.arn}/spark/jobs/*",
+      "${aws_s3_bucket.script.arn}/spark/configs/*"
+    ]
   }
 
   statement {
     sid    = "ReadWriteDataObjects"
     effect = "Allow"
+
     actions = [
       "s3:GetObject",
       "s3:PutObject",
@@ -116,7 +163,33 @@ data "aws_iam_policy_document" "spark_data_s3" {
       "s3:AbortMultipartUpload",
       "s3:ListMultipartUploadParts"
     ]
-    resources = ["${aws_s3_bucket.data.arn}/*"]
+
+    resources = [
+      "${aws_s3_bucket.data.arn}/raw/*",
+      "${aws_s3_bucket.data.arn}/processed/*"
+    ]
+  }
+
+  statement {
+    sid    = "IcebergGlueCatalogPermissions"
+    effect = "Allow"
+
+    actions = [
+      "glue:GetDatabase",
+      "glue:GetDatabases",
+      "glue:CreateDatabase",
+      "glue:GetTable",
+      "glue:GetTables",
+      "glue:CreateTable",
+      "glue:UpdateTable",
+      "glue:DeleteTable"
+    ]
+
+    resources = [
+      "arn:aws:glue:${var.region}:${data.aws_caller_identity.current.account_id}:catalog",
+      "arn:aws:glue:${var.region}:${data.aws_caller_identity.current.account_id}:database/*",
+      "arn:aws:glue:${var.region}:${data.aws_caller_identity.current.account_id}:table/*/*"
+    ]
   }
 }
 
@@ -143,4 +216,3 @@ resource "aws_iam_role_policy_attachment" "spark_data_s3" {
   role       = aws_iam_role.spark_driver.name
   policy_arn = aws_iam_policy.spark_data_s3.arn
 }
-

@@ -18,6 +18,8 @@ spec:
     packages:
       - org.apache.hadoop:hadoop-aws:3.3.4
       - com.amazonaws:aws-java-sdk-bundle:1.12.262
+      - org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.5.2
+      - org.apache.iceberg:iceberg-aws-bundle:1.5.2
   hadoopConf:
     fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
     fs.s3a.aws.credentials.provider: com.amazonaws.auth.WebIdentityTokenCredentialsProvider,com.amazonaws.auth.InstanceProfileCredentialsProvider
@@ -26,19 +28,22 @@ spec:
     spark.kubernetes.authenticate.driver.serviceAccountName: spark-driver-sa
     spark.kubernetes.executor.deleteOnTermination: "true"
     spark.sql.session.timeZone: UTC
+
     spark.jars.ivy: /tmp/.ivy2
     spark.driver.extraJavaOptions: -Divy.cache.dir=/tmp/.ivy2/cache -Divy.home=/tmp/.ivy2
     spark.executor.extraJavaOptions: -Divy.cache.dir=/tmp/.ivy2/cache -Divy.home=/tmp/.ivy2
+
+    spark.sql.extensions: org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
   driver:
-    cores: "{driver_cores}"
-    coreLimit: "{driver_core_limit}"
+    cores: {driver_cores}
+    coreLimit: {driver_core_limit}
     memory: "{driver_memory}"
     serviceAccount: "{driver_service_account}"
     labels:
       component: spark-driver
   executor:
-    instances: "{executor_instances}"
-    cores: "{executor_cores}"
+    instances: {executor_instances}
+    cores: {executor_cores}
     memory: "{executor_memory}"
     labels:
       component: spark-executor

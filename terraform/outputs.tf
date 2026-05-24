@@ -10,16 +10,33 @@ output "data_bucket" {
   value = aws_s3_bucket.data.bucket
 }
 
-output "prefect_flow_bucket" {
-  value = aws_s3_bucket.prefect_flow.bucket
+output "script_bucket" {
+  value = aws_s3_bucket.script.bucket
 }
 
 output "ecr_repository_url" {
+  description = "Deprecated. Prefect runtime ECR repository URL."
+  value       = aws_ecr_repository.prefect_runtime.repository_url
+}
+
+output "prefect_ecr_repository_url" {
   value = aws_ecr_repository.prefect_runtime.repository_url
+}
+
+output "spark_ecr_repository_url" {
+  value = aws_ecr_repository.spark_runtime.repository_url
 }
 
 output "prefect_runtime_image" {
   value = "${aws_ecr_repository.prefect_runtime.repository_url}:${var.image_tag}"
+}
+
+output "spark_runtime_image" {
+  value = local.spark_image
+}
+
+output "glue_database_names" {
+  value = sort(tolist(var.glue_database_names))
 }
 
 output "update_kubeconfig_command" {
@@ -29,4 +46,3 @@ output "update_kubeconfig_command" {
 output "prefect_port_forward_command" {
   value = "kubectl port-forward -n prefect svc/prefect-server 4200:4200"
 }
-

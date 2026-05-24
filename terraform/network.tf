@@ -29,7 +29,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = merge(var.common_tags, {
-    Name                                      = "${var.cluster_name}-public-${count.index + 1}"
+    Name                                        = "${var.cluster_name}-public-${count.index + 1}"
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
     "kubernetes.io/role/elb"                    = "1"
   })
@@ -43,7 +43,7 @@ resource "aws_subnet" "private" {
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, count.index + 10)
 
   tags = merge(var.common_tags, {
-    Name                                      = "${var.cluster_name}-private-${count.index + 1}"
+    Name                                        = "${var.cluster_name}-private-${count.index + 1}"
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
     "kubernetes.io/role/internal-elb"           = "1"
   })

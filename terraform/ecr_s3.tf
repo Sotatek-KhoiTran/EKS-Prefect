@@ -7,12 +7,12 @@ resource "aws_s3_bucket" "data" {
   })
 }
 
-resource "aws_s3_bucket" "prefect_flow" {
-  bucket        = var.prefect_flow_bucket
+resource "aws_s3_bucket" "script" {
+  bucket        = var.script_bucket
   force_destroy = true
 
   tags = merge(var.common_tags, {
-    Name = var.prefect_flow_bucket
+    Name = var.script_bucket
   })
 }
 
@@ -25,8 +25,8 @@ resource "aws_s3_bucket_public_access_block" "data" {
   restrict_public_buckets = true
 }
 
-resource "aws_s3_bucket_public_access_block" "prefect_flow" {
-  bucket = aws_s3_bucket.prefect_flow.id
+resource "aws_s3_bucket_public_access_block" "script" {
+  bucket = aws_s3_bucket.script.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -34,8 +34,13 @@ resource "aws_s3_bucket_public_access_block" "prefect_flow" {
   restrict_public_buckets = true
 }
 
+locals {
+  prefect_repository_name = var.prefect_repository_name != null && var.prefect_repository_name != "" ? var.prefect_repository_name : var.repository_name
+  spark_image             = var.spark_image != null && var.spark_image != "" ? var.spark_image : "${aws_ecr_repository.spark_runtime.repository_url}:${var.image_tag}"
+}
+
 resource "aws_ecr_repository" "prefect_runtime" {
-  name                 = var.repository_name
+  name                 = local.prefect_repository_name
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
@@ -44,24 +49,64 @@ resource "aws_ecr_repository" "prefect_runtime" {
   }
 
   tags = merge(var.common_tags, {
-    Name = var.repository_name
+    Name = local.prefect_repository_name
   })
+}
+
+resource "aws_ecr_repository" "spark_runtime" {
+  name                 = var.spark_repository_name
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = merge(var.common_tags, {
+    Name = var.spark_repository_name
+  })
+}
+
+resource "aws_glue_catalog_database" "spark" {
+  for_each = var.glue_database_names
+
+  name         = each.value
+  description  = "Spark Iceberg database managed by Terraform."
+  location_uri = "s3://${aws_s3_bucket.data.bucket}/${each.value}/"
+
+  parameters = {
+    project = "prefect-spark-eks"
+  }
 }
 
 resource "aws_s3_object" "spark_jobs" {
   for_each = fileset("${path.module}/../jobs", "*.py")
 
-  bucket       = aws_s3_bucket.data.id
-  key          = "jobs/${each.value}"
+  bucket       = aws_s3_bucket.script.id
+  key          = "spark/jobs/${each.value}"
   source       = "${path.module}/../jobs/${each.value}"
   etag         = filemd5("${path.module}/../jobs/${each.value}")
   content_type = "text/x-python"
 }
 
-resource "aws_s3_object" "sample_raw_sales" {
-  bucket       = aws_s3_bucket.data.id
-  key          = "raw/sample_sales.csv"
-  source       = "${path.module}/../data/raw/sample_sales.csv"
-  etag         = filemd5("${path.module}/../data/raw/sample_sales.csv")
-  content_type = "text/csv"
+resource "aws_s3_object" "spark_configs" {
+  for_each = fileset("${path.module}/../jobs/configs", "*.yaml")
+
+  bucket = aws_s3_bucket.script.id
+  key    = "spark/configs/${each.value}"
+  source = "${path.module}/../jobs/configs/${each.value}"
+  etag   = filemd5("${path.module}/../jobs/configs/${each.value}")
+
+  content_type = "application/x-yaml"
+}
+
+resource "aws_s3_object" "prefect_flows" {
+  for_each = fileset("${path.module}/../flows", "*.py")
+
+  bucket = aws_s3_bucket.script.id
+  key    = "prefect/flows/${each.value}"
+  source = "${path.module}/../flows/${each.value}"
+  etag   = filemd5("${path.module}/../flows/${each.value}")
+
+  content_type = "text/x-python"
 }
