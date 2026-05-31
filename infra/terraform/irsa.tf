@@ -78,35 +78,34 @@ resource "aws_iam_role" "spark_driver" {
 
 data "aws_iam_policy_document" "prefect_flow_s3" {
   statement {
-    sid       = "ListScriptPrefixes"
+    sid       = "ListEntireBucket"
     effect    = "Allow"
     actions   = ["s3:ListBucket"]
     resources = [aws_s3_bucket.script.arn]
-
-    condition {
-      test     = "StringLike"
-      variable = "s3:prefix"
-      values = [
-        "prefect",
-        "prefect/*",
-        "prefect/flows",
-        "prefect/flows/*",
-        "spark/configs",
-        "spark/configs/*"
-      ]
-    }
   }
 
   statement {
-    sid    = "ReadPrefectFlowAndConfigs"
+    sid    = "ReadEntireBucket"
     effect = "Allow"
+    actions = ["s3:GetObject"]
+
+    resources = [
+      "${aws_s3_bucket.script.arn}/*"
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "prefect_db_secret" {
+  statement {
+    sid    = "ReadPrefectDbSecret"
+    effect = "Allow"
+
     actions = [
-      "s3:GetObject"
+      "secretsmanager:GetSecretValue"
     ]
 
     resources = [
-      "${aws_s3_bucket.script.arn}/prefect/flows/*",
-      "${aws_s3_bucket.script.arn}/spark/configs/*"
+      aws_secretsmanager_secret.prefect_db_secret.arn
     ]
   }
 }
@@ -200,6 +199,13 @@ resource "aws_iam_policy" "prefect_flow_s3" {
   tags = var.common_tags
 }
 
+resource "aws_iam_policy" "prefect_db_secret" {
+  name   = "PrefectFlowRunDbSecretReadPolicy"
+  policy = data.aws_iam_policy_document.prefect_db_secret.json
+
+  tags = var.common_tags
+}
+
 resource "aws_iam_policy" "spark_data_s3" {
   name   = "SparkJobS3ReadWritePolicy"
   policy = data.aws_iam_policy_document.spark_data_s3.json
@@ -210,6 +216,11 @@ resource "aws_iam_policy" "spark_data_s3" {
 resource "aws_iam_role_policy_attachment" "prefect_flow_s3" {
   role       = aws_iam_role.prefect_flow_run.name
   policy_arn = aws_iam_policy.prefect_flow_s3.arn
+}
+
+resource "aws_iam_role_policy_attachment" "prefect_db_secret" {
+  role       = aws_iam_role.prefect_flow_run.name
+  policy_arn = aws_iam_policy.prefect_db_secret.arn
 }
 
 resource "aws_iam_role_policy_attachment" "spark_data_s3" {

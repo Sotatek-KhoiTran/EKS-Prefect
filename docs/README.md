@@ -29,7 +29,7 @@ aws sts get-caller-identity
 The AWS identity must have permission to manage VPC, EKS, IAM, S3, ECR, CloudWatch logs, and EKS add-ons.
 
 ```bash
-cd terraform
+cd infra/terraform
 cp terraform.tfvars.example terraform.tfvars
 terraform init
 terraform plan
@@ -56,7 +56,7 @@ aws eks update-kubeconfig --name prefect-spark-demo --region ap-southeast-1
 Build and push the runtime image:
 
 ```bash
-cd ..
+cd ../..
 bash scripts/ecr-push-prefect-runtime.sh
 ```
 

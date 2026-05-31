@@ -4,7 +4,7 @@ name: prefect-spark-eks
 deployments:
   - name: eks-spark-s3-demo-flow-1
     version: "1"
-    entrypoint: flows/etl_pipeline.py:etl_pipeline
+    entrypoint: pipelines/flows/etl.py:etl_pipeline
     build: []
     push: []
     pull:
@@ -12,7 +12,7 @@ deployments:
           directory: /opt/prefect
       - prefect_aws.deployments.steps.pull_from_s3:
           bucket: "{{ $SCRIPT_BUCKET }}"
-          folder: prefect
+          folder: ""
       - prefect_aws.deployments.steps.pull_from_s3:
           bucket: "{{ $SCRIPT_BUCKET }}"
           folder: "{{ $SPARK_CONFIGS_PREFIX }}"
@@ -24,6 +24,7 @@ deployments:
       cleanup_on_failure: false
       poll_seconds: 15
       timeout_seconds: 1800
+      log_db: postgres
     work_pool:
       name: "{{ $PREFECT_WORK_POOL_NAME }}"
       work_queue_name: "{{ $PREFECT_WORK_QUEUE_NAME }}"
@@ -38,11 +39,10 @@ deployments:
           SPARK_DQ_CHECKS_KEY: "s3a://{{ $SCRIPT_BUCKET }}/{{ $SPARK_JOBS_PREFIX }}/etl_job_1_dq.py"
           SPARK_NAMESPACE: spark-jobs
           SPARK_IMAGE: "{{ $SPARK_IMAGE_NAME }}:{{ $SPARK_IMAGE_TAG }}"
-          SPARK_APPLICATION_FILE: /opt/prefect/spark-job.yaml
-          SPARK_JOB_CONFIG_FILE: /opt/prefect/spark-job-config.yaml
+          SPARK_APPLICATION_FILE: /opt/prefect/spark/app-template.yaml
+          SPARK_JOB_CONFIG_FILE: /opt/prefect/spark/app-config.yaml
           SENDER_EMAIL: "khoitrlmn@gmail.com"
           RECEIVER_EMAIL: "23021603@vnu.edu.vn"
-          EMAIL_PASSWORD: "{{ prefect.blocks.secret.gmail-app-password }}"
 
   # - name: eks-spark-s3-demo-flow-2
   #   version: "1"

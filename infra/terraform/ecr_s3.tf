@@ -80,33 +80,33 @@ resource "aws_glue_catalog_database" "spark" {
 }
 
 resource "aws_s3_object" "spark_jobs" {
-  for_each = fileset("${path.module}/../jobs", "*.py")
+  for_each = fileset("${path.module}/../../src/jobs", "*.py")
 
   bucket       = aws_s3_bucket.script.id
   key          = "spark/jobs/${each.value}"
-  source       = "${path.module}/../jobs/${each.value}"
-  etag         = filemd5("${path.module}/../jobs/${each.value}")
+  source       = "${path.module}/../../src/jobs/${each.value}"
+  etag         = filemd5("${path.module}/../../src/jobs/${each.value}")
   content_type = "text/x-python"
 }
 
 resource "aws_s3_object" "spark_configs" {
-  for_each = fileset("${path.module}/../jobs/configs", "*.yaml")
+  for_each = fileset("${path.module}/../../configs", "**/*.yaml")
 
   bucket = aws_s3_bucket.script.id
   key    = "spark/configs/${each.value}"
-  source = "${path.module}/../jobs/configs/${each.value}"
-  etag   = filemd5("${path.module}/../jobs/configs/${each.value}")
+  source = "${path.module}/../../configs/${each.value}"
+  etag   = filemd5("${path.module}/../../configs/${each.value}")
 
   content_type = "application/x-yaml"
 }
 
-resource "aws_s3_object" "prefect_flows" {
-  for_each = fileset("${path.module}/../flows", "*.py")
+resource "aws_s3_object" "pipelines" {
+  for_each = fileset("${path.module}/../../pipelines", "**/*.py")
 
   bucket = aws_s3_bucket.script.id
-  key    = "prefect/flows/${each.value}"
-  source = "${path.module}/../flows/${each.value}"
-  etag   = filemd5("${path.module}/../flows/${each.value}")
+  key    = "pipelines/${each.value}"
+  source = "${path.module}/../../pipelines/${each.value}"
+  etag   = filemd5("${path.module}/../../pipelines/${each.value}")
 
   content_type = "text/x-python"
 }

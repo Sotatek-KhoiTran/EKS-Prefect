@@ -31,3 +31,6 @@ kubeconfig.*
 scripts/cleanup-failed-irsa-stacks.sh
 scripts/prefect-cloud-deploy.sh
 scripts/render-spark-application.py
+
+test/
+global-bundle.pem
