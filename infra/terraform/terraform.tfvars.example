@@ -10,3 +10,13 @@ image_tag               = "latest"
 
 prefect_work_pool_name = "kubernetes-pool"
 glue_database_names    = ["processed"]
+
+# Prefect provider resources require the self-hosted API to be reachable from
+# the machine running Terraform, for example through:
+# kubectl port-forward -n prefect svc/prefect-server 4200:4200
+prefect_api_url                         = "http://127.0.0.1:4200/api"
+prefect_github_credentials_block_name   = "github-token"
+create_prefect_github_credentials_block = false
+# github_token should be provided with TF_VAR_github_token or a local tfvars
+# file that is not committed. The token is stored in Terraform state.
+# github_token = "ghp_xxx"

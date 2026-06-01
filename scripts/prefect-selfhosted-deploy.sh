@@ -98,7 +98,7 @@ else
     --set-as-default
 fi
 
-pip install prefect-aws
+pip install prefect-aws prefect-github
 
 cd "${ROOT_DIR}"
 prefect deploy --all

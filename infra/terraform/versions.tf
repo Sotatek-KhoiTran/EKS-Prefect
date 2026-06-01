@@ -22,6 +22,9 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.5"
     }
+    prefect = {
+      source  = "prefecthq/prefect"
+      version = "~> 3.2"
+    }
   }
 }
-

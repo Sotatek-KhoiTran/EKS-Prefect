@@ -30,3 +30,6 @@ provider "helm" {
   }
 }
 
+provider "prefect" {
+  endpoint = var.prefect_api_url
+}

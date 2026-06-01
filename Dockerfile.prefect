@@ -2,8 +2,15 @@ FROM prefecthq/prefect:3-python3.11
 
 WORKDIR /opt/prefect
 
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+USER prefect
 
 # COPY flows ./flows
 # COPY spark-job.yaml ./spark-job.yaml

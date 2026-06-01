@@ -88,6 +88,31 @@ variable "prefect_server_api_url" {
   default     = "http://prefect-server.prefect.svc.cluster.local:4200/api"
 }
 
+variable "prefect_api_url" {
+  description = "Prefect API URL used by the Terraform Prefect provider. For the self-hosted cluster, run kubectl port-forward to expose the API locally before applying Prefect resources."
+  type        = string
+  default     = "http://127.0.0.1:4200/api"
+}
+
+variable "prefect_github_credentials_block_name" {
+  description = "Name of the Prefect GitHub Credentials block referenced by prefect.yaml."
+  type        = string
+  default     = "github-token"
+}
+
+variable "create_prefect_github_credentials_block" {
+  description = "Whether Terraform should create the Prefect GitHub Credentials block."
+  type        = bool
+  default     = false
+}
+
+variable "github_token" {
+  description = "GitHub token for the Prefect GitHub Credentials block. Set with TF_VAR_github_token or a local tfvars file that is not committed."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
 variable "common_tags" {
   description = "Tags applied to AWS resources."
   type        = map(string)
