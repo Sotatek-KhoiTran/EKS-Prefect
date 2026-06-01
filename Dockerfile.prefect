@@ -10,7 +10,7 @@ RUN apt-get update \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-USER prefect
+USER root
 
 # COPY flows ./flows
 # COPY spark-job.yaml ./spark-job.yaml

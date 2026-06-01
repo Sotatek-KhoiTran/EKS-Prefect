@@ -4,16 +4,14 @@ name: prefect-spark-eks
 deployments:
   - name: eks-spark-s3-demo-flow-1
     version: "1"
-    entrypoint: flows/etl.py:etl_pipeline
+    entrypoint: pipelines/flows/etl.py:etl_pipeline
     build: []
     push: []
     pull:
-      - prefect_github.deployments.steps.git_clone:
+      - prefect.deployments.steps.git_clone:
           repository: https://github.com/Sotatek-KhoiTran/EKS-Prefect.git
           branch: feat/git-based-code-storage
           credentials: "{{ prefect.blocks.github-credentials.github-token }}"
-      - prefect.deployments.steps.set_working_directory:
-          directory: /opt/prefect/pipelines
     parameters:
       job_name: etl_job_1
       dq_job_name: etl_job_1_dq
@@ -37,8 +35,8 @@ deployments:
           SPARK_DQ_CHECKS_KEY: "s3a://{{ $SCRIPT_BUCKET }}/{{ $SPARK_JOBS_PREFIX }}/etl_job_1_dq.py"
           SPARK_NAMESPACE: spark-jobs
           SPARK_IMAGE: "{{ $SPARK_IMAGE_NAME }}:{{ $SPARK_IMAGE_TAG }}"
-          SPARK_APPLICATION_FILE: /opt/prefect/configs/spark/app-template.yaml
-          SPARK_JOB_CONFIG_FILE: /opt/prefect/configs/spark/app-config.yaml
+          SPARK_APPLICATION_FILE: configs/spark/app-template.yaml
+          SPARK_JOB_CONFIG_FILE: configs/spark/app-config.yaml
           SENDER_EMAIL: "khoitrlmn@gmail.com"
           RECEIVER_EMAIL: "23021603@vnu.edu.vn"
 

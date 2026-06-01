@@ -39,6 +39,7 @@ def get_file_path(env_var: str, default_filename: str) -> Path:
         path = Path(configured_path)
         if path.exists():
             return path
+        raise FileNotFoundError(f"{env_var} points to a missing file: {path}")
         
     return Path(default_filename)
 
