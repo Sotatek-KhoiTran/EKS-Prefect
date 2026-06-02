@@ -10,12 +10,6 @@ deployments:
     pull:
       - prefect.deployments.steps.set_working_directory:
           directory: /opt/prefect
-      - prefect_aws.deployments.steps.pull_from_s3:
-          bucket: "{{ $SCRIPT_BUCKET }}"
-          folder: ""
-      - prefect_aws.deployments.steps.pull_from_s3:
-          bucket: "{{ $SCRIPT_BUCKET }}"
-          folder: "{{ $SPARK_CONFIGS_PREFIX }}"
     parameters:
       job_name: etl_job_1
       dq_job_name: etl_job_1_dq
@@ -39,8 +33,8 @@ deployments:
           SPARK_DQ_CHECKS_KEY: "s3a://{{ $SCRIPT_BUCKET }}/{{ $SPARK_JOBS_PREFIX }}/etl_job_1_dq.py"
           SPARK_NAMESPACE: spark-jobs
           SPARK_IMAGE: "{{ $SPARK_IMAGE_NAME }}:{{ $SPARK_IMAGE_TAG }}"
-          SPARK_APPLICATION_FILE: /opt/prefect/spark/app-template.yaml
-          SPARK_JOB_CONFIG_FILE: /opt/prefect/spark/app-config.yaml
+          SPARK_APPLICATION_FILE: /opt/prefect/configs/spark/app-template.yaml
+          SPARK_JOB_CONFIG_FILE: /opt/prefect/configs/spark/app-config.yaml
           SENDER_EMAIL: "khoitrlmn@gmail.com"
           RECEIVER_EMAIL: "23021603@vnu.edu.vn"
 

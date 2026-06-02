@@ -5,6 +5,9 @@ WORKDIR /opt/prefect
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY pipelines ./pipelines
+COPY configs ./configs
+
 # COPY flows ./flows
 # COPY spark-job.yaml ./spark-job.yaml
 # COPY spark-job-config.yaml ./spark-job-config.yaml
